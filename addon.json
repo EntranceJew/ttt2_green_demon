@@ -1,0 +1,12 @@
+{
+  "title": "[TTT2] Hidden Trap [WEAPON]",
+  "type": "weapon",
+  "tags": [
+    "realism",
+    "fun"
+  ],
+  "ignore": [
+    ".gitattributes",
+    "map_icons_workshop.jpg"
+  ]
+}

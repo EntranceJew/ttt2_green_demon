@@ -1,0 +1,15 @@
+"UnlitGeneric"
+{
+	"$basetexture" "models/entities/entities/sent_greendemon/gd_glint"
+	"$nolod" 1
+	"$translucent" 1
+"Proxies" 
+{ 
+"AnimatedTexture" 
+{ 
+"animatedTextureVar" "$basetexture" 
+"animatedTextureFrameNumVar" "$frame" 
+"animatedTextureFrameRate" "4" 
+}
+} 
+}
