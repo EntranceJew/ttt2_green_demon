@@ -21,10 +21,10 @@ end
 
 SWEP.Base = "weapon_tttbase"
 
-SWEP.ViewModel          = "models/entities/entities/sent_greendemon_box/box.mdl"
-SWEP.WorldModel         = "models/entities/entities/sent_greendemon_box/box.mdl" --tochange
+SWEP.ViewModel = "models/weapons/v_crowbar.mdl"
+SWEP.WorldModel = "models/entities/entities/sent_greendemon_box/box.mdl"
 
-SWEP.HoldType = "grenade"
+SWEP.HoldType = "normal"
 
 SWEP.DrawCrosshair      = false
 SWEP.Primary.ClipSize       = -1
@@ -44,8 +44,9 @@ SWEP.CanBuy = {ROLE_TRAITOR}
 SWEP.LimitedStock = true
 SWEP.WeaponID = AMMO_CUBE
 
-SWEP.AllowDrop = false
+SWEP.AllowDrop = true
 SWEP.NoSights = true
+SWEP.InvisibleViewModel = true
 
 
 SWEP.ThrowForce = 400
@@ -66,29 +67,8 @@ if SERVER then
 	util.AddNetworkString("TTT2_GreenDemonWarning")
 end
 
-if CLIENT then
-	net.Receive("TTT2_GreenDemonWarning", function()
-		local idx = net.ReadUInt(16)
-		local armed = net.ReadBool()
-
-		if armed then
-			local pos = net.ReadVector()
-			local team = net.ReadString()
-			RADAR.bombs[idx] = {pos=pos, nick="Green Demon", team = team}
-		else
-			RADAR.bombs[idx] = nil
-		end
-
-		RADAR.bombs_count = table.Count(RADAR.bombs)
-	end)
-end
-
 function SWEP:PrimaryAttack()
 	self:SetNextPrimaryFire( CurTime() + self.Primary.Delay )
-	self:MineDrop()
-end
-function SWEP:SecondaryAttack()
-	self:SetNextSecondaryFire( CurTime() + self.Secondary.Delay )
 	self:MineDrop()
 end
 
@@ -110,11 +90,12 @@ function SWEP:MineDrop()
 		local mine = ents.Create("sent_greendemon_box")
 		if IsValid(mine) then
 			mine:SetPos(moveit)
-			mine:Spawn()
 
 			mine:SetOwner(ply)
+
 			mine.WeaponConnection = self
 
+			mine:Spawn()
 			mine:PhysWake()
 			local phys = mine:GetPhysicsObject()
 			if IsValid(phys) then
@@ -241,16 +222,14 @@ if CLIENT then
 	end
 end
 
-function SWEP:Deploy()
-	if SERVER and IsValid(self:GetOwner()) then
-		self:GetOwner():DrawViewModel(false)
-	end
-	return true
-end
-
+---
+-- @realm shared
 function SWEP:DrawWorldModel()
+	if IsValid(self:GetOwner()) then return end
+
+	self:DrawModel()
 end
 
-function SWEP:DrawWorldModelTranslucent()
-end
-
+-- function SWEP:DrawHUD()
+-- 	self:GetOwner():DrawViewModel(false)
+-- end

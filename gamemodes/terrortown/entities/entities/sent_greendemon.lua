@@ -1,10 +1,6 @@
 ENT.Type = "anim"
 
-ENT.PrintName		= "Green Demon"
-ENT.Author			= "WasabiThumbs"
-ENT.Contact			= "Don't"
-ENT.Purpose			= "Give yourself a challenge."
-ENT.Instructions	= "Place and run! Targets nearest."
+ENT.PrintName		= "greendemon_name"
 ENT.Spawnable = true
 ENT.AdminOnly = false
 ENT.RenderGroup     = RENDERGROUP_TRANSLUCENT
@@ -23,6 +19,10 @@ ENT.SparkleBuffer = {}
 ENT.SparkleIndex = 1
 ENT.SparkleWait = 0.15
 ENT.LastSparkleTime = -math.huge
+
+function ENT:SetupDataTables()
+	self:NetworkVar("Entity", 0, "CurrentTarget")
+end
 
 if CLIENT then
 	ENT.Category = "SM64"
@@ -108,6 +108,8 @@ if SERVER then
 		self:EmitSound(self.SpawnSound)
 
 		self.ActivateTime = self.MakeTime + GetConVar("sv_ttt2_greendemon_spawn_delay"):GetFloat()
+
+		markerVision.RegisterEntity(self, self:GetOwner(), VISIBLE_FOR_TEAM)
 	end
 
 	function ENT:Use( activator, caller )
@@ -127,7 +129,7 @@ if SERVER then
 			self.ShadowPosition = tr.HitPos + Vector(0,0,0.1)
 		end
 
-		if !self.Solidified then
+		if not self.Solidified then
 			if CurTime() > self.ActivateTime then
 				self:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
 				self.Solidified = true
@@ -142,11 +144,11 @@ if SERVER then
 			end
 		end
 
-		local nearest = nil
+		local nearest = Null
 		local nearest_dist = GetConVar("sv_ttt2_greendemon_active_range"):GetInt() or math.huge
 		nearest_dist = nearest_dist * nearest_dist
 		for _, ply in ipairs(player.GetAll()) do
-			if !ply:IsSpec() then
+			if not ply:IsSpec() then
 				local dist = ply:EyePos():DistToSqr( self:GetPos() )
 				if ply == self.activator then
 					dist = dist * math.Clamp(1 - GetConVar("sv_ttt2_greendemon_prefer_activator_bias"):GetFloat(), 0, 1)
@@ -156,6 +158,10 @@ if SERVER then
 					nearest_dist = dist
 				end
 			end
+		end
+
+		if nearest ~= self:GetCurrentTarget() then
+			self:SetCurrentTarget(nearest)
 		end
 
 		if IsValid(nearest) then
@@ -199,12 +205,17 @@ if SERVER then
 		-- end )
 
 		self:EmitSound(self.DeathSound)
+		markerVision.RemoveEntity(self)
 		self:Remove()
+	end
+
+	function ENT:OnRemove()
+		markerVision.RemoveEntity(self)
 	end
 
 	function ENT:SpawnFunction( ply, tr, ClassName )
 
-		if ( !tr.Hit ) then return end
+		if ( not tr.Hit ) then return end
 
 		local SpawnPos = tr.HitPos
 
@@ -218,4 +229,50 @@ if SERVER then
 		return ent
 
 	end
+end
+
+if CLIENT then
+	local greendemonMV = Material("vgui/ttt/marker_vision/greendemon")
+
+	local TryT = LANG.TryTranslation
+	local ParT = LANG.GetParamTranslation
+
+	hook.Add("TTT2RenderMarkerVisionInfo", "HUDDrawMarkerVisionGreenDemon", function(mvData)
+		local ent = mvData:GetEntity()
+
+		if not IsValid(ent) or ent:GetClass() ~= "sent_greendemon" then return end
+
+		local owner = ent:GetOwner()
+		local nick = IsValid(owner) and owner:Nick() or "---"
+
+		-- local time = util.SimpleTime(ent:GetExplodeTime() - CurTime(), "%02i:%02i")
+		local distance = math.Round(util.HammerUnitsToMeters(mvData:GetEntityDistance()), 1)
+
+		mvData:EnableText()
+
+		mvData:SetTitle(TryT("greendemon_name"))
+
+		local color = COLOR_WHITE
+
+		local ct = ent:GetCurrentTarget()
+		local target = IsValid(ct) and ct:Nick() or TryT("quick_nobody")
+
+		if ct == LocalPlayer() then
+			color = COLOR_RED
+		elseif IsValid(ct) and ct:GetTeam() == LocalPlayer():GetTeam() then
+			color = COLOR_ORANGE
+		elseif ct == NULL then
+			color = COLOR_SLATEGRAY
+		end
+
+		mvData:AddDescriptionLine(ParT("greendemon_marker_vision_target", {target = target}), color)
+		mvData:AddDescriptionLine(ParT("marker_vision_owner", {owner = nick}))
+		mvData:AddDescriptionLine(ParT("marker_vision_distance", {distance = distance}))
+
+		mvData:AddDescriptionLine(TryT("marker_vision_visible_for_" .. markerVision.GetVisibleFor(ent)), COLOR_SLATEGRAY)
+
+		mvData:AddIcon(greendemonMV, (mvData:IsOffScreen() or not mvData:IsOnScreenCenter()) and color)
+
+		mvData:SetCollapsedLine(ParT("greendemon_marker_collapsed", {distance = distance, target = target}), color)
+	end)
 end

@@ -2,7 +2,8 @@ local L = LANG.GetLanguageTableReference("en")
 
 L["greendemon_name"] = "Green Demon"
 L["greendemon_desc"] = "Spawns a trap that will spawn a Green Demon to chase down its target."
-L["greendemon_help_primary"] = "Place a Green Demon box."
+L["greendemon_help_primary"] = "Throw Green Demon Box"
+L["greendemon_box_name"] = "Green Demon Box"
 
 L["label_ttt2_greendemon_use_music"] = "Use Music"
 L["desc_ttt2_greendemon_use_music"] = "Should you be able to hear the Green Demon coming?"
@@ -28,8 +29,8 @@ L["desc_ttt2_greendemon_box_throw_force"] = "The force a Green Demon box is thro
 L["label_ttt2_greendemon_prefer_activator_bias"] = "Activator Bias"
 L["desc_ttt2_greendemon_prefer_activator_bias"] = "A factor that controls whether it pursues its activator more intensely than other players.\nHigher values means the activator has their distance artificially shortened by this factor.\nSet to \"1\" to only follow activator."
 
-
-
+L.greendemon_marker_vision_target = "Target: {target}"
+L.greendemon_marker_collapsed = "{distance}m, {target}"
 
 
 -- L["ttt2_hidden_trap_name"] = "Hidden Trap"

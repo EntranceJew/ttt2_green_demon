@@ -26,19 +26,6 @@ ENT.ArmTime = 0.125
 ENT.SpawnHeight = 66
 ENT.Color = Color(255,255,255,32)
 
-function ENT:SendWarn(armed)
-	-- if (!armed or (IsValid(ent:GetOwner()) and enti.Owner:IsRole(ROLE_TRAITOR))) then
-	net.Start("TTT2_GreenDemonWarning")
-	net.WriteUInt(self:EntIndex(), 16)
-	net.WriteBool(armed)
-	--net.WriteBit(armed)
-	net.WriteVector(self:GetPos())
-	net.WriteString(self:GetOwner():GetTeam())
-	--net.Send(GetTraitorFilter(true))
-	net.Broadcast()
-	-- end
-end
-
 function ENT:Initialize()
 	self:SetModel(self.Model)
 	-- self:SetMaterial("models/entities/entities/sent_greendemon_box/default")
@@ -64,6 +51,7 @@ function ENT:Initialize()
 		self:SetTrigger(true)
 		self:NextThink(CurTime() + self.ArmTime)
 		self.SpawnTime = CurTime()
+		markerVision.RegisterEntity(self, self:GetOwner(), VISIBLE_FOR_TEAM)
 	end
 
 ---@diagnostic disable-next-line: undefined-field
@@ -75,7 +63,6 @@ if SERVER then
 		if (not self.Solidified and CurTime() > (self.SpawnTime + self.ArmTime)) then
 			self:SetCollisionGroup(COLLISION_GROUP_NONE)
 			self.Solidified = true
-			self:SendWarn(true)
 		end
 	end
 end
@@ -86,15 +73,19 @@ function ENT:SpawnDemon(ply)
 	ent.activator = ply
 	local ep = ply:EyePos() - ply:GetPos()
 	ent:SetPos(self:GetPos() + ep)
-	ent:Spawn()
 
 	local owner = self:GetOwner()
 	ent:SetOwner(owner)
 	ent:SetPhysicsAttacker(owner --[[@as Player]])
 	ent.WeaponConnection = self.WeaponConnection
 
-	self:SendWarn(false)
+	ent:Spawn()
+	markerVision.RemoveEntity(self)
 	self:Remove()
+end
+
+function ENT:OnRemove()
+	markerVision.RemoveEntity(self)
 end
 
 ENT.touched = false
@@ -106,4 +97,38 @@ function ENT:StartTouch(ent)
 		self.touched = true
 		self:SpawnDemon(ent)
 	end
+end
+
+if CLIENT then
+	local greendemonboxMV = Material("vgui/ttt/marker_vision/greendemon_box")
+
+	local TryT = LANG.TryTranslation
+	local ParT = LANG.GetParamTranslation
+
+	hook.Add("TTT2RenderMarkerVisionInfo", "HUDDrawMarkerVisionGreenDemonBox", function(mvData)
+		local ent = mvData:GetEntity()
+
+		if not IsValid(ent) or ent:GetClass() ~= "sent_greendemon_box" then return end
+
+		local owner = ent:GetOwner()
+		local nick = IsValid(owner) and owner:Nick() or "---"
+
+		-- local time = util.SimpleTime(ent:GetExplodeTime() - CurTime(), "%02i:%02i")
+		local distance = math.Round(util.HammerUnitsToMeters(mvData:GetEntityDistance()), 1)
+
+		mvData:EnableText()
+
+		mvData:SetTitle(TryT("greendemon_box_name"))
+
+		mvData:AddDescriptionLine(ParT("marker_vision_owner", {owner = nick}))
+		mvData:AddDescriptionLine(ParT("marker_vision_distance", {distance = distance}))
+
+		mvData:AddDescriptionLine(TryT("marker_vision_visible_for_" .. markerVision.GetVisibleFor(ent)), COLOR_SLATEGRAY)
+
+		local color = COLOR_WHITE
+
+		mvData:AddIcon(greendemonboxMV, (mvData:IsOffScreen() or not mvData:IsOnScreenCenter()) and color)
+
+		mvData:SetCollapsedLine(distance)
+	end)
 end
